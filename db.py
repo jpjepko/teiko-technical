@@ -8,7 +8,11 @@ SCHEMA_FILE = "schema.sql"
 
 
 def main():
-    init_db()
+    try:
+        with open(DB_FILE, "r") as f:
+            pass
+    except FileNotFoundError:
+        init_db()
 
 
 def init_db():
@@ -40,7 +44,60 @@ def init_db():
         cur.executemany("""
                         INSERT INTO cell_counts (sample_id, population, count)
                         VALUES (?, ?, ?)""", data)
-        con.commit()
+    con.commit()
+    con.close()
+
+
+def insert_sample(con, sample_data: dict, cell_counts: dict):
+    cur = con.cursor()
+
+    # check if subject exists
+    cur.execute("SELECT 1 FROM subjects WHERE subject_id = ?", (sample_data["subject_id"], ))
+    if cur.fetchone() is None:
+        # insert new subject
+        cur.execute("""
+                    INSERT INTO subjects (subject_id, project, condition, age, sex)
+                    VALUES (?, ?, ?, ?, ?)""",
+                    (sample_data["subject_id"], sample_data["project"], sample_data["condition"],
+                     sample_data["age"], sample_data["sex"]))
+    con.commit()
+
+    # insert sample
+    cur.execute("""
+                INSERT INTO samples (sample_id, subject_id, treatment, response, sample_type, time_from_treatment_start)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                (sample_data["sample_id"], sample_data["subject_id"], sample_data["treatment"],
+                 sample_data["response"], sample_data["sample_type"], sample_data["time_from_treatment_start"]))
+
+    # insert cell_counts
+    for pop, count in cell_counts.items():
+        cur.execute("""
+                    INSERT INTO cell_counts (sample_id, population, count)
+                    VALUES (?, ?, ?)""", (sample_data["sample_id"], pop, count))
+    con.commit()
+
+
+def remove_sample(con, sample_id: str):
+    cur = con.cursor()
+
+    # fetch subject_id
+    cur.execute("SELECT subject_id FROM samples WHERE sample_id = ?", (sample_id, ))
+    row = cur.fetchone()
+    if not row:
+        print(f"sample {sample_id} not found.")
+        return
+    subject_id = row[0]
+
+    cur.execute("DELETE FROM cell_counts WHERE sample_id = ?", (sample_id, ))
+    cur.execute("DELETE FROM samples WHERE sample_id = ?", (sample_id, ))
+
+    # delete subject if no samples remain
+    cur.execute("SELECT 1 FROM samples WHERE subject_id = ?", (subject_id, ))
+    if cur.fetchone() is None:
+        cur.execute("DELETE FROM subjects WHERE subject_id = ?", (subject_id, ))
+
+    con.commit()
+
 
 if __name__ == "__main__":
     main()
