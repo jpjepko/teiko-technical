@@ -32,6 +32,15 @@ def init_db():
     cur.executemany("INSERT INTO samples VALUES(?, ?, ?, ?, ?, ?)", samp_tuples)
     con.commit()
 
+    # fill in cell_counts
+    for _, row in df.iterrows():
+        sample_id = row["sample"]
+        pop_cols = ['b_cell', 'cd8_t_cell', 'cd4_t_cell', 'nk_cell', 'monocyte']
+        data = [(row["sample"], pop, row[pop]) for pop in pop_cols]
+        cur.executemany("""
+                        INSERT INTO cell_counts (sample_id, population, count)
+                        VALUES (?, ?, ?)""", data)
+        con.commit()
 
 if __name__ == "__main__":
     main()
