@@ -2,24 +2,59 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
 from collections import Counter, defaultdict
-
+import os
 from scipy.stats import ttest_ind
+
+from util.db import insert_sample, delete_sample, get_con, init_db, DB_PATH
+
+
+def create_db():
+    """create db if it does not exist on flask start."""
+    if not os.path.exists(DB_PATH):
+        print("db not found, initing...")
+        init_db()
+    else:
+        print("db found, skipping init")
 
 
 app = Flask(__name__)
 CORS(app)
-DB_PATH = "db/cell-count.db"
 
 
-def get_con():
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    return con
+# run on backend startup
+with app.app_context():
+    create_db()
 
 
 @app.route("/")
 def index():
     return "API running"
+
+
+@app.route("/samples", methods=["POST"])
+def post_sample():
+    try:
+        data = request.get_json()
+        sample_data = data["sample_data"]
+        cell_counts = data.get("cell_counts", {})
+
+        insert_sample(get_con(), sample_data, cell_counts)
+        return jsonify({"status": "success"}), 201
+    except Exception as e:
+        #return jsonify({"error": str(e)}), 400
+        raise e
+
+
+@app.route("/samples/<sample_id>", methods=["DELETE"])
+def handle_delete_sample(sample_id):
+    try:
+        deleted = delete_sample(get_con(), sample_id)
+
+        if not deleted:
+            return jsonify({"error": f"sample {sample_id} not found"}), 404
+        return jsonify({"status": "deleted"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/samples", methods=["GET"])
