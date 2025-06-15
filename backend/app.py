@@ -5,7 +5,7 @@ from collections import Counter, defaultdict
 import os
 from scipy.stats import ttest_ind
 
-from util.db import insert_sample, delete_sample, get_con, init_db, DB_PATH
+from util.db import insert_sample, delete_sample, get_con, init_db, get_counts_by_sample, DB_PATH
 
 
 def create_db():
@@ -35,14 +35,14 @@ def index():
 def post_sample():
     try:
         data = request.get_json()
-        sample_data = data["sample_data"]
+        sample_data = data  # TODO: clean up route and handle
         cell_counts = data.get("cell_counts", {})
 
         insert_sample(get_con(), sample_data, cell_counts)
         return jsonify({"status": "success"}), 201
     except Exception as e:
-        #return jsonify({"error": str(e)}), 400
         raise e
+        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/samples/<sample_id>", methods=["DELETE"])
@@ -95,46 +95,13 @@ def summary():
 
 @app.route("/compare", methods=["GET"])
 def compare_handle():
-    con = get_con()
-    cur = con.cursor()
-    cur.execute("""
-                SELECT
-                    samples.sample_id,
-                    samples.response,
-                    cell_counts.population,
-                    cell_counts.count
-                FROM samples
-                JOIN subjects ON samples.subject_id = subjects.subject_id
-                JOIN cell_counts ON samples.sample_id = cell_counts.sample_id
-                WHERE
-                    samples.sample_type = 'PBMC'
-                    AND samples.treatment = 'tr1'
-                    AND subjects.condition = 'melanoma'
-                    AND samples.response IN ('y', 'n')""")
-    return jsonify([dict(row) for row in cur.fetchall()])
+    return jsonify([dict(row) for row in get_counts_by_sample()])
+
 
 
 @app.route("/compare-stats", methods=["GET"])
 def compare_stats_handle():
-    # TODO: copied from /compare, move into function to avoid duplication
-    con = get_con()
-    cur = con.cursor()
-    cur.execute("""
-                SELECT
-                    samples.sample_id,
-                    samples.response,
-                    cell_counts.population,
-                    cell_counts.count
-                FROM samples
-                JOIN subjects ON samples.subject_id = subjects.subject_id
-                JOIN cell_counts ON samples.sample_id = cell_counts.sample_id
-                WHERE
-                    samples.sample_type = 'PBMC'
-                    AND samples.treatment = 'tr1'
-                    AND subjects.condition = 'melanoma'
-                    AND samples.response IN ('y', 'n')""")
-    
-    rows = cur.fetchall()
+    rows = get_counts_by_sample()
 
     # organize by sample
     samples = defaultdict(lambda: {
@@ -142,13 +109,13 @@ def compare_stats_handle():
         "populations": defaultdict(int)
     })
 
-    for samp_id, resp, pop, count in rows:
-        samples[samp_id]["response"] = resp
-        samples[samp_id]["populations"][pop] += count
+    for sample_id, response, pop, count in rows:
+        samples[sample_id]["response"] = response
+        samples[sample_id]["populations"][pop] += count
 
     # relative freq dataset
     pop_groups = defaultdict(lambda: {"y": [], "n": []})
-    for samp_id, data in samples.items():
+    for sample_id, data in samples.items():
         total = sum(data["populations"].values())
         if total == 0:
             continue
@@ -171,7 +138,6 @@ def compare_stats_handle():
             "significant": bool(pval is not None and pval < 0.05)
         })
 
-    print(res)
     return jsonify([res])
 
 
@@ -195,22 +161,22 @@ def get_filter_summary():
                           AND subjects.condition = 'melanoma'""")
     rows = cur.fetchall()
     
-    samp_ids = []
-    projs = Counter()
-    resps = set()   # use set to count subjects, not samples
+    sample_ids = []
+    projects = Counter()
+    responses = set()   # use set to count subjects, not samples
     sexes = set()
 
     for samp_id, subj_id, proj, resp, sex in rows:
-        samp_ids.append(samp_id)
-        projs[proj] += 1
+        sample_ids.append(samp_id)
+        projects[proj] += 1
         if resp:
-            resps.add((subj_id, resp))
+            responses.add((subj_id, resp))
         if sex:
             sexes.add((subj_id, sex))
     
     return jsonify({
-        "sample_ids": samp_ids,
-        "num_samples_per_project": dict(projs),
-        "response_counts": Counter(r for _, r in resps),
+        "sample_ids": sample_ids,
+        "num_samples_per_project": dict(projects),
+        "response_counts": Counter(r for _, r in responses),
         "sex_counts": Counter(s for _, s in sexes)
     })

@@ -3,7 +3,7 @@ import pandas as pd
 
 
 PATH = "data/cell-count.csv"
-DB_PATH = "db/cell-count.db"
+DB_PATH = "db/database.db"
 SCHEMA_PATH = "db/schema.sql"
 
 
@@ -41,6 +41,7 @@ def init_db():
 
 
 def get_con():
+    """return con object that returns dicts from db (not tuples)."""
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     return con
@@ -98,5 +99,24 @@ def delete_sample(con, sample_id: str) -> bool:
     return True
 
 
-# if __name__ == "__main__":
-#     main()
+def get_counts_by_sample(sample_type="PBMC", treatment="tr1", condition="melanoma"):
+    """returns filtered cell counts aggregated by sample, as list of sqlite3 Row objs."""
+    con = get_con()
+    cur = con.cursor()
+    cur.execute("""
+                SELECT
+                    samples.sample_id,
+                    samples.response,
+                    cell_counts.population,
+                    cell_counts.count
+                FROM samples
+                JOIN subjects ON samples.subject_id = subjects.subject_id
+                JOIN cell_counts ON samples.sample_id = cell_counts.sample_id
+                WHERE
+                    samples.sample_type = ?
+                    AND samples.treatment = ?
+                    AND subjects.condition = ?
+                    AND samples.response IN ('y', 'n')""", (sample_type, treatment, condition))
+    rows = cur.fetchall()
+    con.close()
+    return rows
