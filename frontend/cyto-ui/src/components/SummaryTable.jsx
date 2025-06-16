@@ -1,8 +1,21 @@
 import React, { useEffect, useState } from "react";
 
-export default function SummaryTable({ data }) {
-  if (!data) return <p>loading summary...</p>;
-  if (data.length === 0) return <p>no summary data available.</p>;
+export default function SummaryTable({ refreshTrigger }) {
+  const [summary, setSummary] = useState([]);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch("/summary");
+        const json = await res.json();
+        setSummary(json);
+      } catch (err) {
+        console.error("failed to fetch summmary: ", err);
+      }
+    };
+
+    fetchSummary();
+  }, [refreshTrigger]);
 
   return (
     <div className="overflow-x-auto mt-4">
@@ -18,7 +31,7 @@ export default function SummaryTable({ data }) {
           </tr>
         </thead>
         <tbody>
-          {data.map((row, idx) => (
+          {summary.map((row, idx) => (
             <tr key={idx} className="text-center hover:bg-gray-50">
               <td className="px-4 py-2 border">{row.sample_id}</td>
               <td className="px-4 py-2 border">{row.population}</td>
