@@ -41,7 +41,7 @@ def init_db():
 
 
 def get_con():
-    """return con object that returns dicts from db (not tuples)."""
+    """return con object that returns dicts from db (not tuples). Must be closed after use."""
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     return con
@@ -74,6 +74,7 @@ def insert_sample(con, sample_data: dict, cell_counts: dict = {}):
                     INSERT INTO cell_counts (sample_id, population, count)
                     VALUES (?, ?, ?)""", (sample_data["sample_id"], pop, count))
     con.commit()
+    con.close()
 
 
 def delete_sample(con, sample_id: str) -> bool:
@@ -96,6 +97,7 @@ def delete_sample(con, sample_id: str) -> bool:
         cur.execute("DELETE FROM subjects WHERE subject_id = ?", (subject_id, ))
 
     con.commit()
+    con.close()
     return True
 
 

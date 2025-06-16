@@ -38,7 +38,9 @@ def post_sample():
         sample_data = data  # TODO: clean up route and handle
         cell_counts = data.get("cell_counts", {})
 
-        insert_sample(get_con(), sample_data, cell_counts)
+        con = get_con()
+        insert_sample(con, sample_data, cell_counts)
+        con.close()
         return jsonify({"status": "success"}), 201
     except Exception as e:
         raise e
@@ -48,7 +50,9 @@ def post_sample():
 @app.route("/samples/<sample_id>", methods=["DELETE"])
 def handle_delete_sample(sample_id):
     try:
-        deleted = delete_sample(get_con(), sample_id)
+        con = get_con()
+        deleted = delete_sample(con, sample_id)
+        con.close()
 
         if not deleted:
             return jsonify({"error": f"sample {sample_id} not found"}), 404
@@ -95,8 +99,37 @@ def summary():
 
 @app.route("/compare", methods=["GET"])
 def compare_handle():
-    return jsonify([dict(row) for row in get_counts_by_sample()])
+    #return jsonify([dict(row) for row in get_counts_by_sample()])
+    con = get_con()
+    cur = con.cursor()
 
+    cur.execute("""SELECT s.sample_id, s.response, cell_counts.population, cell_counts.count, totals.total_count
+                FROM samples s
+                JOIN cell_counts ON s.sample_id = cell_counts.sample_id
+                JOIN (
+                    SELECT sample_id, SUM(count) AS total_count
+                    FROM cell_counts
+                    GROUP BY sample_id
+                ) AS totals ON s.sample_id = totals.sample_id
+                WHERE s.sample_type = 'PBMC'""")
+
+    rows = cur.fetchall()
+
+    # format with relative freq
+    res = []
+    for row in rows:
+        sample_id, response, pop, count, total = row
+        if total == 0 or response not in ['y', 'n']:
+            continue
+        rel_freq = (count / total) * 100
+        res.append({
+            "population": pop,
+            "response": response,
+            "relative_frequency": rel_freq
+        })
+    con.close()
+
+    return jsonify(res)
 
 
 @app.route("/compare-stats", methods=["GET"])
@@ -145,6 +178,11 @@ def compare_stats_handle():
 def get_filter_summary():
     con = get_con()
 
+    sample_type = request.args.get("sample_type", "PBMC")
+    condition = request.args.get("condition", "melanoma")
+    treatment = request.args.get("treatment", "tr1")
+    time_from_trt_start = request.args.get("time_from_treatment_start", 0)
+
     cur = con.execute("""
                       SELECT
                           samples.sample_id,
@@ -155,12 +193,14 @@ def get_filter_summary():
                       FROM samples
                       JOIN subjects ON samples.subject_id = subjects.subject_id
                       WHERE
-                          samples.sample_type = 'PBMC'
-                          AND samples.time_from_treatment_start = 0
-                          AND samples.treatment = 'tr1'
-                          AND subjects.condition = 'melanoma'""")
+                          samples.sample_type = ?
+                          AND samples.time_from_treatment_start = ?
+                          AND samples.treatment = ?
+                          AND subjects.condition = ?""",
+                          (sample_type, time_from_trt_start, treatment, condition))
     rows = cur.fetchall()
-    
+    con.close()
+
     sample_ids = []
     projects = Counter()
     responses = set()   # use set to count subjects, not samples
