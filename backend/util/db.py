@@ -1,14 +1,27 @@
 import sqlite3
 import pandas as pd
-
+import os
+from scipy.stats import ttest_ind
+from collections import Counter, defaultdict
 
 PATH = "data/cell-count.csv"
 DB_PATH = "db/database.db"
 SCHEMA_PATH = "db/schema.sql"
 
 
-def init_db():
+def create_db():
+    """create db if it does not exist on flask start."""
+    print("CREATE")
+    if not os.path.exists(DB_PATH):
+        print("db not found, initing...")
+        _init_db()
+    else:
+        print("db found, skipping init")
+
+
+def _init_db():
     """Init db from schema and populate with csv data."""
+    print("INIT")
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     with open(SCHEMA_PATH) as fp:
@@ -40,14 +53,188 @@ def init_db():
     con.close()
 
 
-def get_con():
+def _get_con():
     """return con object that returns dicts from db (not tuples). Must be closed after use."""
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     return con
 
 
-def insert_sample(con, sample_data: dict, cell_counts: dict = {}):
+def get_samples():
+    con = _get_con()
+    cur = con.execute("SELECT * FROM samples")
+    samples = [dict(row) for row in cur.fetchall()]
+    con.close()
+    return samples
+
+
+def get_summary_list():
+    samples = get_samples()
+    con = _get_con()
+    cur = con.cursor()
+    summary_list = []
+
+    for sample in samples:
+        sample_id = sample["sample_id"]
+        cur.execute("SELECT * FROM cell_counts WHERE sample_id = ?", (sample_id, ))
+        pops = [dict(row) for row in cur.fetchall()]
+        total_count = sum([pop["count"] for pop in pops])
+
+        for pop in pops:
+            summary_list.append({
+                "sample_id": pop["sample_id"],
+                "total_count": total_count,
+                "population": pop["population"],
+                "count": pop["count"],
+                "relative_frequency": 100.0 * pop["count"] / total_count
+            })
+
+    con.close()
+    return summary_list
+
+
+def get_freqs_by_response():
+    """return list of PBMC relative freqs, grouped by cell pop and response."""
+    con = _get_con()
+    cur = con.execute("""SELECT
+                          samples.sample_id,
+                          samples.response,
+                          cell_counts.population,
+                          cell_counts.count,
+                          totals.total_count
+                      FROM samples
+                      JOIN cell_counts ON samples.sample_id = cell_counts.sample_id
+                      JOIN (
+                          SELECT sample_id, SUM(count) AS total_count
+                          FROM cell_counts
+                          GROUP BY sample_id
+                      ) AS totals ON samples.sample_id = totals.sample_id
+                      WHERE samples.sample_type = 'PBMC'""")
+
+    rows = cur.fetchall()
+    con.close()
+
+    # format with relative freq
+    res = []
+    for row in rows:
+        sample_id, response, pop, count, total = row
+        if total == 0 or response not in ['y', 'n']:
+            continue
+        rel_freq = (count / total) * 100.0
+        res.append({
+            "population": pop,
+            "response": response,
+            "relative_frequency": rel_freq
+        })
+    
+    return res
+
+
+def get_significance(sample_type, treatment, condition):
+    """run t-test on filtered pops, grouped by response."""
+    con = _get_con()
+    cur = con.execute("""SELECT
+                          samples.sample_id,
+                          samples.response,
+                          cell_counts.population,
+                          cell_counts.count
+                      FROM samples
+                      JOIN subjects ON samples.subject_id = subjects.subject_id
+                      JOIN cell_counts ON samples.sample_id = cell_counts.sample_id
+                      WHERE
+                          samples.sample_type = ?
+                          AND samples.treatment = ?
+                          AND subjects.condition = ?
+                          AND samples.response IN ('y', 'n')""",
+                      (sample_type, treatment, condition))
+
+    rows = cur.fetchall()
+    con.close()
+
+    # organize by sample
+    samples = defaultdict(lambda: {
+        "response": None,
+        "populations": defaultdict(int)
+    })
+
+    for sample_id, response, pop, count in rows:
+        samples[sample_id]["response"] = response
+        samples[sample_id]["populations"][pop] += count
+
+    # relative freq dataset
+    pop_groups = defaultdict(lambda: {"y": [], "n": []})
+    for sample_id, data in samples.items():
+        total = sum(data["populations"].values())
+        if total == 0:
+            continue
+        for pop, count in data["populations"].items():
+            freq = (count / total) * 100
+            pop_groups[pop][data["response"]].append(freq)
+
+    # t-tests
+    res = []
+    for pop, groups in pop_groups.items():
+        y_vals = groups["y"]
+        n_vals = groups["n"]
+        if len(y_vals) < 2 or len(n_vals) < 2:
+            pval = None # insufficient data
+        else:
+            _, pval = ttest_ind(y_vals, n_vals, equal_var=False)
+        res.append({
+            "population": pop,
+            "p_value": round(pval, 4) if pval is not None else None,
+            "significant": bool(pval is not None and pval < 0.05)
+        })
+    
+    return res
+
+
+def get_filter_summary(sample_type, condition, treatment, time_from_trt_start):
+    """apply filter and return counts of samples and subjects."""
+    con = _get_con()
+    cur = con.execute("""SELECT
+                          samples.sample_id,
+                          samples.subject_id,
+                          subjects.project,
+                          samples.response,
+                          subjects.sex
+                      FROM samples
+                      JOIN subjects ON samples.subject_id = subjects.subject_id
+                      WHERE
+                          samples.sample_type = ?
+                          AND samples.time_from_treatment_start = ?
+                          AND samples.treatment = ?
+                          AND subjects.condition = ?""",
+                      (sample_type, time_from_trt_start, treatment, condition))
+    rows = cur.fetchall()
+    con.close()
+
+    sample_ids = []
+    projects = Counter()
+    responses = set()   # use set to count subjects, not samples
+    sexes = set()
+    
+    for sample_id, subject_id, project, response, sex in rows:
+        sample_ids.append(sample_id)
+        projects[project] += 1
+
+        if response:
+            responses.add((subject_id, response))
+        if sex:
+            responses.add((subject_id, sex))
+    
+    # TODO: debug non-default inputs (ttt=7)
+
+    return {
+        "sample_ids": sample_ids,
+        "num_samples_per_project": dict(projects),
+        "response_counts": Counter(r for _, r in responses),
+        "sex_counts": Counter(s for _, s in sexes)
+    }
+
+
+def insert_sample(sample_data: dict, cell_counts: dict = {}):
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
 
     # check if subject exists
@@ -77,7 +264,8 @@ def insert_sample(con, sample_data: dict, cell_counts: dict = {}):
     con.close()
 
 
-def delete_sample(con, sample_id: str) -> bool:
+def delete_sample(sample_id: str) -> bool:
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
 
     # fetch subject_id
@@ -99,26 +287,3 @@ def delete_sample(con, sample_id: str) -> bool:
     con.commit()
     con.close()
     return True
-
-
-def get_counts_by_sample(sample_type="PBMC", treatment="tr1", condition="melanoma"):
-    """returns filtered cell counts aggregated by sample, as list of sqlite3 Row objs."""
-    con = get_con()
-    cur = con.cursor()
-    cur.execute("""
-                SELECT
-                    samples.sample_id,
-                    samples.response,
-                    cell_counts.population,
-                    cell_counts.count
-                FROM samples
-                JOIN subjects ON samples.subject_id = subjects.subject_id
-                JOIN cell_counts ON samples.sample_id = cell_counts.sample_id
-                WHERE
-                    samples.sample_type = ?
-                    AND samples.treatment = ?
-                    AND subjects.condition = ?
-                    AND samples.response IN ('y', 'n')""", (sample_type, treatment, condition))
-    rows = cur.fetchall()
-    con.close()
-    return rows

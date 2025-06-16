@@ -8,7 +8,7 @@ export default function StatsReport({ refreshTrigger }) {
       try {
         const res = await fetch("/compare-stats");
         const json = await res.json();
-        setStats(json[0]); // Assuming outer array wrapper as in your example
+        setStats(json);
       } catch (err) {
         console.error("Failed to fetch significance stats:", err);
       }
