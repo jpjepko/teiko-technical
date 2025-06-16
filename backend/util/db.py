@@ -221,9 +221,7 @@ def get_filter_summary(sample_type, condition, treatment, time_from_trt_start):
         if response:
             responses.add((subject_id, response))
         if sex:
-            responses.add((subject_id, sex))
-    
-    # TODO: debug non-default inputs (ttt=7)
+            sexes.add((subject_id, sex))
 
     return {
         "sample_ids": sample_ids,
