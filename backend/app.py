@@ -22,13 +22,12 @@ def index():
 def handle_post_sample():
     try:
         data = request.get_json()
-        sample_data = data  # TODO: clean up route and handle
+        sample_data = data
         cell_counts = data.get("cell_counts", {})
 
         insert_sample(sample_data, cell_counts)
         return jsonify({"status": "success"}), 201
     except Exception as e:
-        raise e
         return jsonify({"error": str(e)}), 400
 
 
