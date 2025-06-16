@@ -21,6 +21,41 @@ export default function SampleForm({ onSuccess }) {
     },
   });
 
+  const validateForm = () => {
+    const requiredFields = [
+      "sample_id", "subject_id", "treatment", "sample_type", "project", "condition", "age", "sex"
+    ];
+
+    for (let field of requiredFields) {
+      if (!form[field]) {
+        alert(`Field "${field}" is required.`);
+        return false;
+      }
+    }
+
+    // no negative integers
+    if (form.age < 0 || form.time_from_treatment_start < 0) {
+      alert("Age and Time from Treatment Start must be non-negative.");
+      return false;
+    }
+
+    for (let count of Object.values(form.cell_counts)) {
+      if (count < 0) {
+        alert("All cell counts must be non-negative.");
+        return false;
+      }
+    }
+
+    // sum(cell_counts) > 0 (to avoid div by zero errors with relative_freq calculation)
+    const sumValues = obj => Object.values(form.cell_counts).reduce((a, b) => a + b, 0);
+    if (Object.values(form.cell_counts).reduce((a, b) => a + b, 0) <= 0) {
+      alert("All cell counts cannot be zero.");
+      return false;
+    }
+
+    return true;
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name in form.cell_counts) {
@@ -35,6 +70,9 @@ export default function SampleForm({ onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
+
     const res = await fetch("/samples", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -46,7 +84,15 @@ export default function SampleForm({ onSuccess }) {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (e) => {
+    e.preventDefault();
+
+    // only sample id required
+    if (!form.sample_id) {
+      alert("Sample ID required for deletion.");
+      return;
+    }
+
     const res = await fetch(`/samples/${form.sample_id}`, { method: "DELETE" });
     if (res.ok) {
       setForm({ ...form, sample_id: "" });
@@ -72,8 +118,8 @@ export default function SampleForm({ onSuccess }) {
         <label className="block font-bold mb-2">Response: </label>
         <select
           className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight"
-          name="sex"
-          value={form.sex}
+          name="response"
+          value={form.response}
           onChange={handleChange}
         >
           <option value="">Select a response</option>
