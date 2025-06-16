@@ -34,6 +34,7 @@ export default function BoxplotView({ refreshTrigger }) {
             boxpoints: "all",
             jitter: 0.3,
             pointpos: -1.8,
+            marker: {color: resp === 'y' ? "#3D9970" : "#FF4136"}
           };
         });
 
