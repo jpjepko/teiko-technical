@@ -47,8 +47,8 @@ export default function SampleForm({ onSuccess }) {
     }
 
     // sum(cell_counts) > 0 (to avoid div by zero errors with relative_freq calculation)
-    const sumValues = obj => Object.values(form.cell_counts).reduce((a, b) => a + b, 0);
-    if (Object.values(form.cell_counts).reduce((a, b) => a + b, 0) <= 0) {
+    const sumValues = Object.values(form.cell_counts).reduce((a, b) => a + b, 0);
+    if (sumValues <= 0) {
       alert("All cell counts cannot be zero.");
       return false;
     }
