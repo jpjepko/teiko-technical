@@ -107,8 +107,8 @@ export default function SampleForm({ onSuccess }) {
         ))}
       </fieldset>
 
-      <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 m-2 rounded focus:outline-none focus:shadow-outline" type="submit">Add Sample</button>
-      <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 m-2 rounded focus:outline-none focus:shadow-outline" type="button" onClick={handleDelete}>Delete Sample</button>
+      <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 m-2" type="submit">Add Sample</button>
+      <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 m-2" type="button" onClick={handleDelete}>Delete Sample</button>
     </form>
   );
 }
