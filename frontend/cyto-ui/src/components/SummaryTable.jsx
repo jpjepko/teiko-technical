@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { fetchJson } from "../util/fetchJson";
 
 export default function SummaryTable({ refreshTrigger }) {
   const [summary, setSummary] = useState([]);
 
   useEffect(() => {
     const fetchSummary = async () => {
-      try {
-        const res = await fetch("/summary");
-        const json = await res.json();
-        setSummary(json);
-      } catch (err) {
-        console.error("failed to fetch summmary: ", err);
-      }
+      const data = await fetchJson("/summary");
+      if (data) setSummary(data);
     };
 
     fetchSummary();

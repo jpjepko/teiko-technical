@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { fetchJson } from "../util/fetchJson";
 
 export default function StatsReport({ refreshTrigger }) {
   const [stats, setStats] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
-      try {
-        const res = await fetch("/compare-significance");
-        const json = await res.json();
-        setStats(json);
-      } catch (err) {
-        console.error("Failed to fetch significance stats:", err);
-      }
+      const data = await fetchJson("/compare-significance");
+      if (data) setStats(data);
     };
 
     fetchStats();
