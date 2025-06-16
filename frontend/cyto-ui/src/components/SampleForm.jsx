@@ -58,43 +58,61 @@ export default function SampleForm({ onSuccess }) {
     <form className="max-w-sm" onSubmit={handleSubmit}>
       <div>
         <label className="block font-bold mb-2">Sample ID: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="sample_id" value={form.sample_id} onChange={handleChange} required />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="sample_id" value={form.sample_id} onChange={handleChange} required />
       </div>
       <div>
         <label className="block font-bold mb-2">Subject ID: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="subject_id" value={form.subject_id} onChange={handleChange} required />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="subject_id" value={form.subject_id} onChange={handleChange} required />
       </div>
       <div>
         <label className="block font-bold mb-2">Treatment: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="treatment" value={form.treatment} onChange={handleChange} />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="treatment" value={form.treatment} onChange={handleChange} />
       </div>
       <div>
-        <label className="block font-bold mb-2">Response (y/n): </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="response" value={form.response} onChange={handleChange} />
+        <label className="block font-bold mb-2">Response: </label>
+        <select
+          className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight"
+          name="sex"
+          value={form.sex}
+          onChange={handleChange}
+        >
+          <option value="">Select a response</option>
+          <option value="y">Yes</option>
+          <option value="n">No</option>
+        </select>
       </div>
       <div>
         <label className="block font-bold mb-2">Sample Type: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="sample_type" value={form.sample_type} onChange={handleChange} />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="sample_type" value={form.sample_type} onChange={handleChange} />
       </div>
       <div>
         <label className="block font-bold mb-2">Time from Treatment Start: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="time_from_treatment_start" type="number" value={form.time_from_treatment_start} onChange={handleChange} />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="time_from_treatment_start" type="number" value={form.time_from_treatment_start} onChange={handleChange} />
       </div>
       <div>
         <label className="block font-bold mb-2">Project: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="project" value={form.project} onChange={handleChange} />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="project" value={form.project} onChange={handleChange} />
       </div>
       <div>
         <label className="block font-bold mb-2">Condition: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="condition" value={form.condition} onChange={handleChange} />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="condition" value={form.condition} onChange={handleChange} />
       </div>
       <div>
         <label className="block font-bold mb-2">Age: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="age" type="number" value={form.age} onChange={handleChange} />
+        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight" name="age" type="number" value={form.age} onChange={handleChange} />
       </div>
       <div>
         <label className="block font-bold mb-2">Sex: </label>
-        <input className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline" name="sex" value={form.sex} onChange={handleChange} />
+        <select
+          className="shadow appearance-none border rounded w-full py-2 px-3 leading-tight"
+          name="sex"
+          value={form.sex}
+          onChange={handleChange}
+        >
+          <option value="">Select sex</option>
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+        </select>
       </div>
 
       <fieldset>
