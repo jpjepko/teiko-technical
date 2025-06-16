@@ -7,10 +7,8 @@ export default function BoxplotView({ refreshTrigger }) {
   useEffect(() => {
     const fetchCompareData = async () => {
       try {
-        console.log("fetchCompareData called");
         const res = await fetch("/compare");
         const raw = await res.json();
-        console.log("raw data: ", raw);
 
         // Organize data by population -> response -> list of percentages
         const grouped = {}; // { b_cell: { y: [], n: [] }, ... }

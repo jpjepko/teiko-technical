@@ -6,7 +6,7 @@ export default function StatsReport({ refreshTrigger }) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("/compare-stats");
+        const res = await fetch("/compare-significance");
         const json = await res.json();
         setStats(json);
       } catch (err) {

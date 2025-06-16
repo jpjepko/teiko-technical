@@ -19,7 +19,7 @@ def index():
 
 
 @app.route("/samples", methods=["POST"])
-def post_sample():
+def handle_post_sample():
     try:
         data = request.get_json()
         sample_data = data  # TODO: clean up route and handle
@@ -45,22 +45,22 @@ def handle_delete_sample(sample_id):
 
 
 @app.route("/samples", methods=["GET"])
-def list_samples():
+def handle_samples():
     return jsonify(get_samples())
 
 
 @app.route("/summary", methods=["GET"])
-def summary():
+def handle_summary():
     return jsonify(get_summary_list())
 
 
 @app.route("/compare", methods=["GET"])
-def compare_handle():
-    return jsonify(get_freqs_by_response())
+def handle_compare():
+    return jsonify(get_freqs_by_response("PBMC"))
 
 
-@app.route("/compare-stats", methods=["GET"])
-def compare_stats_handle():
+@app.route("/compare-significance", methods=["GET"])
+def handle_compare_significance():
     return jsonify(get_significance("PBMC", "tr1", "melanoma"))
 
 

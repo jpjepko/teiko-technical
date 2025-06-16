@@ -93,8 +93,8 @@ def get_summary_list():
     return summary_list
 
 
-def get_freqs_by_response():
-    """return list of PBMC relative freqs, grouped by cell pop and response."""
+def get_freqs_by_response(sample_type):
+    """return list of relative freqs, grouped by cell pop and response."""
     con = _get_con()
     cur = con.execute("""SELECT
                           samples.sample_id,
@@ -109,7 +109,7 @@ def get_freqs_by_response():
                           FROM cell_counts
                           GROUP BY sample_id
                       ) AS totals ON samples.sample_id = totals.sample_id
-                      WHERE samples.sample_type = 'PBMC'""")
+                      WHERE samples.sample_type = ?""", (sample_type, ))
 
     rows = cur.fetchall()
     con.close()
