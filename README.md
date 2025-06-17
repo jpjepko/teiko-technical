@@ -55,7 +55,7 @@ The `samples` table stores metadata about every sample in the data. Again, dupli
 
 The `cell_counts` table stores the counts/populations of each cell-type, with a relation to the `samples` table, as each cell count is tied to a specific example. Only necessary information is stored; other fields of interest (like total count across a sample) can be easily computed with a SQL query. Storing just what is needed also aids in scalability, minimizing storing and managing unnecessary data.
 
-In general, the relations/foreign key constraints are helpful in avoiding invalid data states, as the schema requires those keys to exist in other tables.
+In general, the relations/foreign key constraints are helpful in avoiding invalid data states, as the schema requires those keys to exist in other tables. As for analytics, in addition to what is already done here, we could consider averages across other demographics (like age-range, sex, or time from treatment start). Assuming sufficient data, we could also look at cell counts across different conditions (e.g., melanoma vs healthy). Lastly, there are plenty of interesting ML applications that could be done, such as making predictions about response to treatment, given a condition and cell counts.
 
 ## Code Structure
 The structure is as follows:
