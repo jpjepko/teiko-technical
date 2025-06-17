@@ -1,7 +1,30 @@
 # teiko-technical
 
 # Requirements
-* Python >= 3.13
+
+The following versions were used in development:
+
+```sh
+# backend
+$ python --version
+Python 3.13.3
+
+# frontend
+$ node --version
+v24.1.0
+$ npm --version
+11.4.1
+```
+
+In addition, the following libraries are used (as detailed in `requirements.txt` and `package-lock.json` respectively):
+* Backend
+  * Flask
+  * flask-cors
+  * pandas
+  * scipy
+* Frontend
+  * tailwind v3
+  * react-plotly.js
 
 ## Usage
 Create virtual environment, install Python dependencies, and run Flask backend (for dev environment):
@@ -43,7 +66,7 @@ The `subjects` table stores metadata about each human subject in the data. Isola
 | `sample_type`               | text    |                              |
 | `time_from_treatment_start` | integer |                              |
 
-The `samples` table stores metadata about every sample in the data. Again, duplication is avoided by only storing relevant data to each sample, and it is linked to the `subjects` tables with a relation to `subject_id`. This is particularly helpful when deleting a sample, as it would not desirable to delete subject metadata if there are still other `samples` linked to them in the data. Efficient insertion/removal is key to scalability.
+The `samples` table stores metadata about every sample in the data. Again, duplication is avoided by only storing relevant data to each sample, and it is linked to the `subjects` tables with a relation to `subject_id`. This is particularly helpful when deleting a sample, as it would not desirable to delete subject metadata if there are other `samples` still linked to them in the data. Efficient insertion/removal is key to scalability.
 
 ### `cell_counts`
 | Field        | Type    | Attributes                 |
