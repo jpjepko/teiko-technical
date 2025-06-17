@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import SummaryTable from "./components/SummaryTable";
 import SampleForm from "./components/SampleForm";
 import FilterPanel from "./components/FilterPanel";
